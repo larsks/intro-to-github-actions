@@ -35,19 +35,21 @@ But there are [many, many][] others.
 
 # How do they work?
 
-Actions are combined into "workflows" which are described by [YAML][] files that live in `.github/workflows` in your repository. For example, looking at the Operate First [apps][] repository:
+Actions are combined into "workflows" which are described by [YAML][] files that live in `.github/workflows` in your repository. For example, looking at the [NERC workflows][] repository:
 
 ```
 $ tree .github
 .github/
 └── workflows
-    └── book.yml
+    ├── precommit.yaml
+    ├── tests.yaml
+    └── validate-manifests.yaml
 ```
 
 (Lots of details in the complete [syntax reference][])
 
 [yaml]: https://en.wikipedia.org/wiki/YAML
-[apps]: https://github.com/operate-first/apps/tree/master/.github/workflows
+[nerc workflows]: https://github.com/ocp-on-nerc/workflows/tree/master/.github/workflows
 [syntax reference]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
 
 ---
@@ -63,7 +65,7 @@ $ tree .github
 
 # Example 1: the deploy-book workflow
 
-Our first example comes from the [`apps` repository][deploy-book].
+Our first example comes from the Operate First [`apps` repository][deploy-book].
 
 [deploy-book]: https://github.com/operate-first/apps/blob/master/.github/workflows/book.yml
 
@@ -232,10 +234,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '^3.9'
 ```
@@ -250,7 +252,7 @@ Installing dependencies can dramatically increase the runtime of your workflows.
 
 ```
       - name: Configure caching
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pre-commit
           key: precommit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -278,7 +280,7 @@ Running `pre-commit` will install files into `~/.cache/pre-commit`. When the wor
 
 # Interlude 2: Pre-commit
 
-- The `pre-commit` tool comes with a number of built-in checks, and it can also source checks from external repositories.
+- The [`pre-commit`][pre-commit] tool comes with a number of built-in checks, and it can also source checks from external repositories.
 - Checks to run are defined in a `.pre-commit-config.yaml` file, which is included in your repository.
 - Developers can configure `pre-commit` as a `git` `pre-commit` hook by simply running `pre-commit install`.
 
@@ -286,11 +288,12 @@ Running `pre-commit` will install files into `~/.cache/pre-commit`. When the wor
 
 # Interlude 2: Pre-commit
 
-Some checks we commonly run in Operate First repositories:
+Some checks we commonly run in NERC repositories:
 
 ```
+repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.3.0
+    rev: v4.1.0
     hooks:
       - id: trailing-whitespace
       - id: check-merge-conflict
@@ -312,12 +315,12 @@ We often work with YAML files, so we use the `yamllint` tool to detect a number 
 
 ```
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.25.0
+    rev: v1.28.0
     hooks:
       - id: yamllint
         files: \.(yaml|yml)$
         types: [file, yaml]
-        entry: yamllint --strict -c yamllint-config.yaml
+        entry: yamllint --strict
 ```
 
 The behavior of `yamllint` is controlled by a configuration file (typically `.yamllint.yaml`, but in this case `yamllint-config.yaml`.
@@ -376,7 +379,7 @@ on:
 
 # Workflows can be shared!
 
-Now we can include this workflow in another repository:
+Now we can [include this workflow][] in another repository:
 
 ```
 name: Run pre-commit checks
@@ -388,6 +391,8 @@ jobs:
   run-linters:
     uses: ocp-on-nerc/workflows/.github/workflows/precommit.yaml@main
 ```
+
+[include this workflow]: https://github.com/OCP-on-NERC/nerc-ocp-config/blob/main/.github/workflows/precommit.yaml
 
 ---
 
@@ -404,10 +409,9 @@ jobs:
 
 - [Automate software releases](https://github.com/larsks/halberd/blob/main/.github/workflows/release.yml)
 - [Automate issue labeling](https://github.com/cli/cli/blob/trunk/.github/workflows/issueauto.yml)
-- [Build Docker images](https://github.com/acmesh-official/acme.sh/blob/master/.github/workflows/dockerhub.yml)
+- [Build Docker images](https://github.com/OCP-on-NERC/workflows/blob/main/.github/workflows/build-image.yaml)
 - [Publish a website](https://github.com/openshift/node-feature-discovery/blob/master/.github/workflows/gh-pages.yml)
 - [Publish DNS changes](https://github.com/larsks/oddbit-dns/blob/main/.github/workflows/update-dns.yaml)
-- [Automate project boards](https://github.com/CCI-MOC/sprint-tools/blob/master/.github/workflows/create-sprint-board.yml)
 
 ---
 
@@ -437,8 +441,7 @@ point should a project consider using a GH workflow?** (bmontalv)
 - Would your project benefit from automation?
 - Things I use automation for in personal projects:
 
+  - Running linters and unit tests
   - Creating software releases
   - Publishing a website
   - Pushing DNS changes
-
-- Automated checks on pull requests are useful (a) as soon as you have one or more collaborators, or (b) if you're really disciplined about making changes through pull requests.
